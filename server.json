@@ -8,13 +8,13 @@
     "url": "https://github.com/opendata-kr/narajangteo-corpinfo-mcp",
     "source": "github"
   },
-  "version": "0.0.0",
+  "version": "0.1.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@opendata-kr/narajangteo-corpinfo-mcp",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "transport": {
         "type": "stdio"
       },
