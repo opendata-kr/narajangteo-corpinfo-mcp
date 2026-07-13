@@ -1,12 +1,14 @@
 # corpinfo 후속 백로그 (도구 구현 후)
 
-도구 2종 구현·검증 완료 후 최종 코드리뷰가 남긴 항목이다. 라이브 검증(활용신청 승인 후 실 API 구동) 단계에서 먼저 확인할 것과 교차 정합 리팩터로 나뉜다.
+도구 2종 구현·검증 완료 후 최종 코드리뷰가 남긴 항목이다. 라이브 검증 결과와 교차 정합 리팩터로 나뉜다.
 
-## 라이브 검증에서 확인할 것 (정확성, API 실동작 의존)
+## 라이브 검증 결과 (2026-07-13, 승인 인증키로 실 API 구동)
 
-- **무효 업종상태 집합 확장**: `INVALID_STATUS_SET`은 docx 확인값 "유효기간 경과" 하나만 시드다. 정지·말소·취소 등 다른 무효 상태명이 실제로 어떤 문자열인지 라이브 응답으로 확인해 denylist에 추가한다. 확장 전에는 미확인 무효 상태가 유효기간이 남았거나 무기한이면 `valid:true`로 낙관될 수 있다. 원신호(`statusName`)를 항상 반환하므로 소비 측이 재판정할 수 있으나, 판정 정확도를 위해 라이브로 집합을 채운다. 근거: `src/format.ts` `INVALID_STATUS_SET`.
-- **동일 업종코드 중복행 해소**: `check_company_qualification`의 코드 매칭이 `find`(첫 매칭)이라, 같은 `indstrytyCd`가 여러 행으로(예: 만료행 + 현행) 오면 첫 행에서 valid를 읽는다. 업종 응답이 코드당 중복행을 주는지 라이브로 확인하고, 준다면 유효·최신 행을 우선하도록 매칭을 바꾼다. 근거: `src/tools/checkCompanyQualification.ts` `toIndustryChecks`.
-- **오퍼레이션별 응답·페이징 확정**: `inqryDiv` 의미, `pageSize` 상한, 응답 구조, 필드 패딩을 오퍼레이션마다 실 호출로 확정한다(형제 서비스로 가정 금지). `get_company_profile`·`check_company_qualification`을 실사용 시나리오(자사 자격 대조·경쟁사 프로파일링·부정당 스크리닝)로 전 도구 구동한다.
+인증 정상(code 30 아님), 4 오퍼레이션 응답·필드 매핑 정합 확인. 두 도구가 실데이터로 정확히 동작.
+
+- **필드 매핑·응답 구조**: 확인 완료. `get_company_profile`의 4 facet(기본·업종·공급물품·부정당)과 `check_company_qualification`이 실데이터로 동작. 부정당 필드 매핑(`rsttBgnDate`→`sanctionBgnDt`, `insttNm`→`sanctionInstitution`, `lawordNm`→`legalBasis`, `rsttProgrsNm`→`sanctionStatus` 등)을 제재 업체(bizno 1489901590)로 확정. `inqryDiv` 맵 정확(전 facet 정상 응답).
+- **업종 유효 판정**: 확인 완료. 활성 업종은 `statusName` ""/"정상"·`expiryDate` 빈값이라 `valid:true`. 만료 업종(bizno 3068134668)은 "유효기간 경과"·과거 만료일이라 `valid:false`. `INVALID_STATUS_SET` 시드 "유효기간 경과"가 실 상태 문자열과 일치. 정지·말소류는 샘플에서 미관측(발생 시 expiry 검사가 방어). 새 무효 상태명이 관측되면 그때 denylist에 추가.
+- **동일 업종코드 중복행**: 샘플 업체들에서 코드당 중복행 미관측. `find()`-first 실무 위험 낮음. 잔여 관찰 항목이다(중복 발견 시 `toIndustryChecks`에서 유효·최신 행 우선).
 
 ## 교차 정합·리팩터 (동작 무변)
 
