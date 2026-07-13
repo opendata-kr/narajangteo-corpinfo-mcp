@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm # pnpm-lock.yaml 포함
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        patterns: ["*"]
+      production:
+        dependency-type: production
+        # 잘 깨지거나 조율이 필요한 것은 그룹에서 빼 개별 PR로 롤
+        exclude-patterns:
+          - "@modelcontextprotocol/sdk"
+          - "@opendata-kr/core"
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    groups:
+      actions:
+        patterns: ["*"]

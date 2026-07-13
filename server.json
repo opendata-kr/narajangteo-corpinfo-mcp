@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.opendata-kr/narajangteo-corpinfo",
+  "description": "나라장터 사용자정보서비스 Open API를 위한 로컬 MCP 서버",
+  "title": "나라장터 사용자정보",
+  "websiteUrl": "https://github.com/opendata-kr/narajangteo-corpinfo-mcp#readme",
+  "repository": {
+    "url": "https://github.com/opendata-kr/narajangteo-corpinfo-mcp",
+    "source": "github"
+  },
+  "version": "0.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@opendata-kr/narajangteo-corpinfo-mcp",
+      "version": "0.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "DATA_GO_KR_SERVICE_KEY",
+          "description": "공공데이터포털 data.go.kr Decoding(원본) 인증키",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "DATA_GO_KR_BASE_URL",
+          "description": "게이트웨이 base URL 오버라이드",
+          "default": "https://apis.data.go.kr"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "name": "@opendata-kr/narajangteo-corpinfo-mcp",
+  "version": "0.0.0",
+  "description": "나라장터 사용자정보서비스 Open API를 위한 로컬 MCP 서버",
+  "mcpName": "io.github.opendata-kr/narajangteo-corpinfo",
+  "type": "module",
+  "bin": {
+    "narajangteo-corpinfo-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opendata-kr/narajangteo-corpinfo-mcp.git"
+  },
+  "homepage": "https://github.com/opendata-kr/narajangteo-corpinfo-mcp#readme",
+  "bugs": "https://github.com/opendata-kr/narajangteo-corpinfo-mcp/issues",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.8.0",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:package": "node scripts/verify-npm-package.mjs",
+    "verify:server-json": "node scripts/verify-server-json.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "나라장터",
+    "사용자정보",
+    "data.go.kr"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@opendata-kr/core": "^0.3.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
