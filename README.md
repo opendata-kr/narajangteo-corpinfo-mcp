@@ -1,23 +1,46 @@
 <!-- mcp-name: io.github.opendata-kr/narajangteo-corpinfo -->
 
-# narajangteo-corpinfo-mcp
+# @opendata-kr/narajangteo-corpinfo-mcp
 
-[![npm version](https://img.shields.io/npm/v/@opendata-kr/narajangteo-corpinfo-mcp.svg)](https://www.npmjs.com/package/@opendata-kr/narajangteo-corpinfo-mcp)
-[![license](https://img.shields.io/npm/l/@opendata-kr/narajangteo-corpinfo-mcp.svg)](./LICENSE)
+나라장터 사용자정보서비스(공공데이터포털 data.go.kr) Open API를 감싼 로컬 MCP 서버.
 
-나라장터 사용자정보서비스 Open API를 위한 로컬 MCP 서버
+[![npm version](https://img.shields.io/npm/v/@opendata-kr/narajangteo-corpinfo-mcp)](https://www.npmjs.com/package/@opendata-kr/narajangteo-corpinfo-mcp)
+[![CI](https://img.shields.io/github/actions/workflow/status/opendata-kr/narajangteo-corpinfo-mcp/ci.yml?branch=main&label=CI)](https://github.com/opendata-kr/narajangteo-corpinfo-mcp/actions/workflows/ci.yml)
+[![node](https://img.shields.io/node/v/@opendata-kr/narajangteo-corpinfo-mcp)](https://nodejs.org)
+[![license](https://img.shields.io/npm/l/@opendata-kr/narajangteo-corpinfo-mcp)](./LICENSE)
 
-> [!NOTE]
-> 이 README는 스캐폴딩 골격이다. 전체 클라이언트별 설정 매트릭스, 원클릭 설치 버튼, 인증키 발급 그림 가이드(`docs/service-key-guide.md`)는 발행 전 채운다(README 작성 표준 원형 A).
+Claude Desktop 등 MCP 클라이언트에서 사업자번호 하나로 조달업체의 자격과 프로파일을 자연어로 조회한다. 예를 들어 이렇게 물어볼 수 있다.
 
-## Prerequisites
+- "사업자번호 1234567890 업체 프로파일을 보여줘"
+- "이 업체가 업종코드 1468 자격이 유효한지 확인해줘"
+- "경쟁사 사업자번호 8888888888이 세부품명 8111159901 공급 자격이 있는지 봐줘"
+- "이 업체에 유효한 부정당 제재가 있는지 확인해줘"
 
-- Node.js 24+ (`.nvmrc` = `lts/krypton`)
-- data.go.kr(공공데이터포털) **나라장터 사용자정보서비스** 활용신청 후 발급받은 **Decoding(원본) 인증키**. 발급 절차는 [`docs/service-key-guide.md`](./docs/service-key-guide.md) 참조.
+## 특징
 
-## Configuration
+- **사업자번호 하나로 4-facet 병렬 프로파일**: 기본정보·등록업종·공급물품·부정당제재를 한 번에 조회한다.
+- **업종 유효 판정**: 코드가 목록에 있는지(보유)와 유효한지(유효)를 나눠 판정한다. 업종상태·유효기간을 반영하므로 코드 존재가 곧 유효를 뜻하지 않는다.
+- **자사·경쟁사 구분 없는 조회**: 공개 데이터라 사업자번호만 있으면 어느 업체든 조회한다.
+- **부분 실패·조회상한 표면화**: 일부 facet 조회가 실패해도 나머지 결과를 반환하고, 실패한 facet은 오류로 드러낸다. 목록이 조회 상한에 잘리면 `truncated`로 알려, 목록 부재를 미보유로 오판하지 않게 한다(조용한 거짓 음성 없음).
+- **data.go.kr 에러코드 한국어화**: 인증키 만료, 트래픽 초과 등 결과코드를 조치 가능한 한국어 메시지로 정규화한다.
+- **이중 인코딩 방어**: Encoding 키를 잘못 넣으면 경고하고, 요청은 한 번만 인코딩한다.
 
-MCP 클라이언트 설정에 아래 블록을 추가한다. `@latest`로 핀한다.
+## 준비물
+
+- **Node.js 24** 이상 (`.nvmrc` = `lts/krypton`).
+- **data.go.kr 인증키**:
+  1. [공공데이터포털](https://www.data.go.kr)에서 **나라장터 사용자정보서비스**를 활용신청해 `[승인]`을 받는다. 인증키는 계정당 하나지만, 각 API는 저마다 활용신청 승인이 있어야 그 API에서 인증된다. 서비스키가 있어도 이 API를 활용신청하지 않으면 인증 오류(코드 30)가 난다.
+  2. 마이페이지 → 활용신청 현황 → 개발계정 상세에서 **Decoding 서비스키**를 복사한다.
+  3. 같은 `DATA_GO_KR_SERVICE_KEY`는 같은 계정으로 활용신청한 다른 data.go.kr API에도 재사용된다.
+
+> [!TIP]
+> 공공데이터포털이 처음이라면 활용신청부터 인증키 복사까지 그림으로 따라 하는 [**data.go.kr 인증키 발급 가이드**](docs/service-key-guide.md)를 참고한다.
+
+> 서비스키는 반드시 **Decoding(원본)** 키를 넣는다. Encoding(`%2B` 등 포함) 키를 넣으면 이중 인코딩으로 인증 오류(코드 30)가 난다.
+
+## MCP 클라이언트 설정
+
+MCP 클라이언트에 아래 config를 추가한다:
 
 ```json
 {
@@ -25,38 +48,560 @@ MCP 클라이언트 설정에 아래 블록을 추가한다. `@latest`로 핀한
     "narajangteo-corpinfo": {
       "command": "npx",
       "args": ["-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"],
-      "env": {
-        "DATA_GO_KR_SERVICE_KEY": "여기에_Decoding_인증키"
-      }
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
     }
   }
 }
 ```
 
+> [!NOTE]
+> `@opendata-kr/narajangteo-corpinfo-mcp@latest`를 쓰면 클라이언트가 항상 최신 버전을 받는다.
+
 > [!IMPORTANT]
-> `DATA_GO_KR_SERVICE_KEY`는 필수 시크릿이다. 원클릭·env 미지원 클라이언트는 설치 후 셸 환경변수로 키를 설정한다.
+> `DATA_GO_KR_SERVICE_KEY`(필수, **Decoding 원본** 키)가 없으면 첫 호출이 인증 오류(코드 30)로 실패한다. 위 config의 `env`에 키를 넣는다. 원클릭 버튼이나 env를 config에 담지 못하는 클라이언트는 설치 후 셸 환경변수로 `DATA_GO_KR_SERVICE_KEY`를 설정한다.
+
+### 클라이언트별 설정
+
+<details>
+  <summary>Amp</summary>
+  https://ampcode.com/manual#mcp 의 안내를 따르고 위 config를 사용한다. CLI로도 추가할 수 있다:
+
+```bash
+amp mcp add narajangteo-corpinfo -- npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Antigravity</summary>
+
+<a href="https://antigravity.google/docs/mcp">Antigravity 문서</a>의 커스텀 MCP 서버 추가 방법을 따라 아래 config를 MCP servers 설정에 넣는다:
+
+```json
+{
+  "mcpServers": {
+    "narajangteo-corpinfo": {
+      "command": "npx",
+      "args": ["-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"],
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+  <summary>Claude Code</summary>
+
+Claude Code CLI로 서버를 추가한다 (<a href="https://code.claude.com/docs/en/mcp">가이드</a>):
+
+```bash
+claude mcp add narajangteo-corpinfo --scope user --env DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 -- npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+</details>
+
+<details>
+  <summary>Cline</summary>
+  https://docs.cline.bot/mcp/configuring-mcp-servers 의 안내를 따르고 위 config를 사용한다.
+</details>
+
+<details>
+  <summary>Codex</summary>
+  <a href="https://developers.openai.com/codex/mcp/#configure-with-the-cli">MCP 설정 가이드</a>를 따르고 위 config를 사용한다. Codex CLI로도 추가할 수 있다:
+
+```bash
+codex mcp add narajangteo-corpinfo --env DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 -- npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+**Windows**
+
+`~/.codex/config.toml`에 `cmd /c` 래핑으로 추가한다:
+
+```toml
+[mcp_servers.narajangteo-corpinfo]
+command = "cmd"
+args = ["/c", "npx", "-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"]
+env = { DATA_GO_KR_SERVICE_KEY = "발급받은_Decoding_키" }
+```
+
+</details>
+
+<details>
+  <summary>Command Code</summary>
+
+Command Code CLI로 서버를 추가한다 (<a href="https://commandcode.ai/docs/mcp">MCP 가이드</a>):
+
+```bash
+cmd mcp add narajangteo-corpinfo --scope user npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Continue</summary>
+
+Continue의 <a href="https://docs.continue.dev/customize/deep-dives/mcp">MCP 가이드</a>를 따른다. Continue는 `mcpServers`를 배열로 쓴다:
+
+```json
+{
+  "mcpServers": [
+    {
+      "name": "narajangteo-corpinfo",
+      "command": "npx",
+      "args": ["-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"],
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+  <summary>Copilot CLI</summary>
+
+Copilot CLI를 시작한다:
+
+```
+copilot
+```
+
+MCP 서버 추가 대화를 연다:
+
+```
+/mcp add
+```
+
+다음 필드를 입력하고 `CTRL+S`로 저장한다:
+
+- **Server name:** `narajangteo-corpinfo`
+- **Server Type:** `[1] Local`
+- **Command:** `npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest`
+- **Environment variables:** `DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키`
+
+</details>
+
+<details>
+  <summary>Copilot / VS Code</summary>
+
+**버튼으로 설치:**
+
+[<img src="https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Install in VS Code">](https://vscode.dev/redirect/mcp/install?name=io.github.opendata-kr%2Fnarajangteo-corpinfo&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40opendata-kr%2Fnarajangteo-corpinfo-mcp%22%5D%2C%22env%22%3A%7B%7D%7D)
+
+[<img src="https://img.shields.io/badge/VS_Code_Insiders-Install_Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Install in VS Code Insiders">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522io.github.opendata-kr%252Fnarajangteo-corpinfo%2522%252C%2522config%2522%253A%257B%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522%2540opendata-kr%252Fnarajangteo-corpinfo-mcp%2522%255D%252C%2522env%2522%253A%257B%257D%257D%257D)
+
+> 버튼은 키를 담지 못한다. 설치 후 `.vscode/mcp.json`(또는 사용자 설정)의 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+**직접 추가:**
+
+VS Code [MCP 설정 가이드](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_add-an-mcp-server)를 따르거나 CLI를 쓴다.
+
+macOS·Linux:
+
+```bash
+code --add-mcp '{"name":"narajangteo-corpinfo","command":"npx","args":["-y","@opendata-kr/narajangteo-corpinfo-mcp@latest"],"env":{"DATA_GO_KR_SERVICE_KEY":"발급받은_Decoding_키"}}'
+```
+
+Windows(PowerShell):
+
+```powershell
+code --add-mcp '{"""name""":"""narajangteo-corpinfo""","""command""":"""npx""","""args""":["""-y""","""@opendata-kr/narajangteo-corpinfo-mcp@latest"""],"""env""":{"""DATA_GO_KR_SERVICE_KEY""":"""발급받은_Decoding_키"""}}'
+```
+
+</details>
+
+<details>
+  <summary>Cursor</summary>
+
+**버튼으로 설치:**
+
+[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add narajangteo-corpinfo MCP server to Cursor">](https://cursor.com/en/install-mcp?name=narajangteo-corpinfo&config=eyJjb21tYW5kIjoibnB4IC15IEBvcGVuZGF0YS1rci9uYXJhamFuZ3Rlby1jb3JwaW5mby1tY3BAbGF0ZXN0In0=)
+
+> 버튼은 키를 담지 못한다. 설치 후 Cursor의 MCP 설정에서 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+**직접 추가:**
+
+`Cursor Settings` → `MCP` → `New MCP Server`에서 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Factory CLI</summary>
+
+Factory CLI로 서버를 추가한다 (<a href="https://docs.factory.ai/cli/configuration/mcp">가이드</a>):
+
+```bash
+droid mcp add narajangteo-corpinfo "npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest"
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Gemini CLI</summary>
+
+Gemini CLI로 서버를 추가한다.
+
+**프로젝트 범위:**
+
+```bash
+gemini mcp add narajangteo-corpinfo npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+**전역:**
+
+```bash
+gemini mcp add -s user narajangteo-corpinfo npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+또는 <a href="https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md#how-to-set-up-your-mcp-server">MCP 가이드</a>를 따르고 위 config를 쓴다. `~/.gemini/settings.json`의 서버 정의 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Gemini Code Assist</summary>
+  <a href="https://cloud.google.com/gemini/docs/codeassist/use-agentic-chat-pair-programmer#configure-mcp-servers">MCP 설정 가이드</a>를 따르고 위 config를 사용한다.
+</details>
+
+<details>
+  <summary>Grok Build CLI</summary>
+
+```bash
+grok mcp add narajangteo-corpinfo npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다. 더 많은 옵션은 <a href="https://docs.x.ai/build/features/skills-plugins-marketplaces">문서</a> 참고.
+
+</details>
+
+<details>
+  <summary>JetBrains AI Assistant & Junie</summary>
+
+`Settings | Tools | AI Assistant | Model Context Protocol (MCP)` → `Add`에서 위 config를 사용한다.
+Junie도 같은 방식으로 `Settings | Tools | Junie | MCP Settings` → `Add`에서 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Katalon Studio</summary>
+
+Katalon StudioAssist는 MCP 프록시를 통해 stdio 서버를 연결한다.
+
+**1단계:** <a href="https://docs.katalon.com/katalon-studio/studioassist/mcp-servers/setting-up-mcp-proxy-for-stdio-mcp-servers">MCP 프록시 설정 가이드</a>로 프록시를 설치한다.
+
+**2단계:** 프록시로 서버를 띄운다(같은 셸에 `DATA_GO_KR_SERVICE_KEY`를 export 한 상태):
+
+```bash
+DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamablehttp --port 8080 -- npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+**3단계:** StudioAssist에 다음 설정으로 서버를 추가한다:
+
+- **Connection URL:** `http://127.0.0.1:8080/mcp`
+- **Transport type:** `HTTP`
+
+</details>
+
+<details>
+  <summary>Kiro</summary>
+
+**Kiro Settings**에서 `Configure MCP` → `Open Workspace or User MCP Config` → 위 config를 사용한다.
+
+또는 **Activity Bar** → `Kiro` → `MCP Servers` → `Open MCP Config`에서 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Mistral Vibe</summary>
+
+`~/.vibe/config.toml`에 추가한다:
+
+```toml
+[[mcp_servers]]
+name = "narajangteo-corpinfo"
+transport = "stdio"
+command = "npx"
+args = ["-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"]
+env = { DATA_GO_KR_SERVICE_KEY = "발급받은_Decoding_키" }
+```
+
+</details>
+
+<details>
+  <summary>OpenCode</summary>
+
+`opencode.json`에 추가한다. 없으면 `~/.config/opencode/opencode.json`에 만든다 (<a href="https://opencode.ai/docs/mcp-servers">가이드</a>):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "narajangteo-corpinfo": {
+      "type": "local",
+      "command": ["npx", "-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"],
+      "environment": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+  <summary>Qoder</summary>
+
+**Qoder Settings**에서 `MCP Server` → `+ Add` → 위 config를 사용한다.
+
+또는 <a href="https://docs.qoder.com/user-guide/chat/model-context-protocol">MCP 가이드</a>를 따르고 위 config를 쓴다.
+
+</details>
+
+<details>
+  <summary>Qoder CLI</summary>
+
+Qoder CLI로 서버를 추가한다 (<a href="https://docs.qoder.com/cli/using-cli#mcp-servers">가이드</a>):
+
+**프로젝트 범위:**
+
+```bash
+qodercli mcp add narajangteo-corpinfo -- npx @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+**전역:**
+
+```bash
+qodercli mcp add -s user narajangteo-corpinfo -- npx @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Visual Studio</summary>
+
+**버튼으로 설치:**
+
+[<img src="https://img.shields.io/badge/Visual_Studio-Install-C16FDE?logo=visualstudio&logoColor=white" alt="Install in Visual Studio">](https://vs-open.link/mcp-install?%7B%22name%22%3A%22narajangteo-corpinfo%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22%40opendata-kr%2Fnarajangteo-corpinfo-mcp%40latest%22%5D%7D)
+
+> 버튼은 키를 담지 못한다. 설치 후 서버 설정의 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Warp</summary>
+
+`Settings | AI | Manage MCP Servers` → `+ Add`에서 [MCP 서버를 추가](https://docs.warp.dev/knowledge-and-collaboration/mcp#adding-an-mcp-server)하고 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Windsurf</summary>
+  <a href="https://docs.windsurf.com/windsurf/cascade/mcp#mcp-config-json">MCP 설정 가이드</a>를 따르고 위 config를 사용한다. Windsurf는 `mcpServers` 키를 쓴다(`~/.codeium/windsurf/mcp_config.json`).
+</details>
+
+<details>
+  <summary>Zed</summary>
+
+`~/.config/zed/settings.json`에 추가한다(스키마는 Zed 버전에 따라 다를 수 있으니 <a href="https://zed.dev/docs/ai/mcp">Zed 공식 문서</a>를 확인):
+
+```json
+{
+  "context_servers": {
+    "narajangteo-corpinfo": {
+      "command": { "path": "npx", "args": ["-y", "@opendata-kr/narajangteo-corpinfo-mcp@latest"] },
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+  <summary>ChatGPT · 원격 전용 클라이언트</summary>
+
+ChatGPT Developer Mode처럼 **원격(HTTPS) MCP만 지원하는 클라이언트**는 로컬 stdio 서버를 직접 붙일 수 없다. stdio→HTTP 브리지(`mcp-proxy`)로 이 서버를 HTTP로 띄우고 공개 HTTPS 엔드포인트(리버스 프록시·터널·호스팅)로 노출한 뒤, 그 URL을 커넥터로 등록한다.
+
+```bash
+DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamablehttp --port 8080 -- npx -y @opendata-kr/narajangteo-corpinfo-mcp@latest
+```
+
+`http://127.0.0.1:8080/mcp`를 공개 HTTPS로 노출하는 것은 사용자 몫이다. (`mcp-remote`는 반대로 stdio 클라이언트를 원격 서버에 붙일 때 쓰는 도구라 여기엔 맞지 않는다.)
+
+</details>
+
+### 발견성
+
+이 서버는 MCP 레지스트리에 `io.github.opendata-kr/narajangteo-corpinfo`로 기술된다. [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io)를 지원하는 클라이언트에서 검색·설치할 수 있다.
 
 ## 환경변수
 
-| 이름 | 필수 | 비밀 | 기본값 | 설명 |
+| 환경변수 | 필수 | 비밀 | 기본값 | 설명 |
 |---|---|---|---|---|
-| `DATA_GO_KR_SERVICE_KEY` | 예 | 예 | | 공공데이터포털 Decoding(원본) 인증키 |
+| `DATA_GO_KR_SERVICE_KEY` | 예 | 예 | (없음) | 공공데이터포털 **Decoding(원본)** 인증키 |
 | `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr` | 게이트웨이 base URL 오버라이드 |
 
-## Tools
+## 도구
 
-구현 예정(설계 확정 후 구현 계획에서 등록). 자세한 파라미터·응답 필드는 발행 전 문서화한다.
+2개 도구 모두 읽기 전용 조회다(`readOnlyHint`·`openWorldHint`). 사업자번호로 조회하며 업체명→사업자번호 리졸버나 코드→업체 역검색은 이 API 표면에 없어 지원하지 않는다. 등록업종·공급물품 목록은 조회 상한에 잘릴 수 있고, 잘리면 응답의 `truncated`가 `true`가 되며 `notes`에 경고가 실린다.
+
+| 도구 | 설명 |
+|---|---|
+| `get_company_profile` | 사업자번호로 기본정보·등록업종·공급물품·부정당제재를 한 번에 조립 |
+| `check_company_qualification` | 사업자번호에 대해 지정 업종코드·세부품명번호의 보유·유효 판정 |
+
+### `get_company_profile`
+
+사업자등록번호로 한 조달업체의 기본정보·업종·공급물품·부정당제재를 한 번에 조립해 반환한다. 업체 전반을 훑을 때 쓴다. 특정 업종·품목 보유 여부만 판정하려면 `check_company_qualification`을 쓴다.
+
+| 파라미터 | 타입 | 설명 |
+|---|---|---|
+| `bizno` | `string` | 사업자등록번호 10자리(숫자만). 필수 |
+
+**반환**
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `bizno` | `string` | 조회한 사업자번호 |
+| `basic` | `CompanyBasic \| null \| { error }` | 기본정보. 미조회 시 `null`, 조회 실패 시 `{ error }` |
+| `industries` | `CompanyIndustry[] \| { error }` | 등록업종 목록 |
+| `supplyProducts` | `CompanySupplyProduct[] \| { error }` | 공급물품 목록 |
+| `sanctions` | `{ sanctioned: boolean, records: CompanySanction[] } \| { error }` | 부정당제재 유무와 목록 |
+| `truncated` | `{ industries, supplyProducts, sanctions }` (각 `boolean`) | facet별 목록 조회 상한 도달 여부 |
+| `notes` | `string[]` | 미등록·조회상한 등 주의사항 |
+
+각 facet(`basic`·`industries`·`supplyProducts`·`sanctions`)은 조회 실패 시 `{ error }`로 격리된다(전체 실패로 뭉개지 않음).
+
+### `check_company_qualification`
+
+사업자등록번호에 대해 지정 업종코드·세부품명번호의 보유·유효 여부와 부정당제재를 판정한다. 특정 입찰 자격 충족 여부를 볼 때 쓴다. 업체 전반 프로파일이 필요하면 `get_company_profile`을 쓴다.
+
+| 파라미터 | 타입 | 설명 |
+|---|---|---|
+| `bizno` | `string` | 사업자등록번호 10자리(숫자만). 필수 |
+| `industryCodes` | `string[]` | 업종코드 4자리 배열. 미지정 또는 빈 배열이면 보유 업종 전 목록 반환 |
+| `productCodes` | `string[]` | 세부품명번호 10자리 배열. 미지정 또는 빈 배열이면 공급물품 전 목록 반환 |
+
+**반환**
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `bizno` | `string` | 조회한 사업자번호 |
+| `industryChecks` | `IndustryCheck[] \| { error }` | 코드별 업종 보유·유효 판정 |
+| `productChecks` | `ProductCheck[] \| { error }` | 코드별 세부품명 보유·제조 판정 |
+| `sanction` | `{ sanctioned: boolean, records: CompanySanction[] } \| { error }` | 부정당제재 유무와 목록 |
+| `truncated` | `{ industries, supplyProducts, sanctions }` (각 `boolean`) | 목록 조회 상한 도달 여부 |
+| `notes` | `string[]` | 역검색 불가·미보유 미확정 등 주의사항 |
+
+지정 코드가 목록에 없으면 `held: false`다. 다만 그 목록이 조회 상한에 잘렸으면(`truncated`) 미보유가 확정이 아님을 `notes`가 알린다.
+
+## 응답 필드
+
+### `CompanyBasic`
+
+| 필드 | 설명 |
+|---|---|
+| `bizno` | 사업자번호 |
+| `corpNm` | 업체명 |
+| `engCorpNm` | 영문업체명 |
+| `ceoNm` | 대표자명 |
+| `opbizDt` | 개업일시 |
+| `rgnNm` | 지역명 |
+| `zip` | 우편번호 |
+| `adrs` · `dtlAdrs` | 주소 · 상세주소 |
+| `telNo` · `faxNo` | 전화 · 팩스 |
+| `hmpgAdrs` | 홈페이지 |
+| `mnfctDivNm` | 제조구분명 |
+| `emplyeNum` | 종업원수 |
+| `corpBsnsDivNm` | 업체업무구분명 |
+| `hdoffceDivNm` | 본사구분명 |
+
+### `CompanyIndustry`
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `indstrytyCd` | `string` | 업종코드 4자리 |
+| `indstrytyNm` | `string` | 업종명 |
+| `statusName` | `string` | 업종상태명 |
+| `expiryDate` | `string` | 유효기간만료일시(빈값은 무기한) |
+| `representative` | `string` | 대표업종여부(Y/N) |
+| `valid` | `boolean` | 유효 판정 결과(상태·유효기간 반영) |
+
+### `CompanySupplyProduct`
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `dtilPrdctClsfcNo` | `string` | 세부품명번호 10자리 |
+| `dtilPrdctClsfcNoNm` | `string` | 세부품명 |
+| `manufacture` | `boolean` | 제조여부 |
+| `rgstDt` | `string` | 등록일시 |
+
+### `CompanySanction`
+
+| 필드 | 설명 |
+|---|---|
+| `bizno` | 사업자번호 |
+| `corpNm` | 업체명 |
+| `sanctionBgnDt` | 제재시작일자 |
+| `sanctionEndDt` | 제재종료일자 |
+| `sanctionInstitution` | 제재통보 수요기관명 |
+| `legalBasis` | 근거법령명 |
+| `articleClause` | 조항호 |
+| `sanctionStatus` | 제재상태명 |
+
+조회시점 유효한 제재분만 반환한다(만료·해제분 미포함).
+
+### `IndustryCheck`
+
+`check_company_qualification`의 코드별 업종 판정.
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `code` | `string` | 업종코드 |
+| `held` | `boolean` | 보유 여부 |
+| `valid` | `boolean` | 유효 여부 |
+| `statusName` | `string` | 업종상태명 |
+| `expiryDate` | `string` | 유효기간만료일시 |
+| `representative` | `string` | 대표업종여부 |
+
+### `ProductCheck`
+
+`check_company_qualification`의 코드별 세부품명 판정. 공급물품은 유효 개념이 없어 `valid`가 없다.
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `code` | `string` | 세부품명번호 |
+| `held` | `boolean` | 보유 여부 |
+| `manufacture` | `boolean` | 제조여부 |
 
 ## 개발
 
 ```bash
-nvm use
+nvm use            # Node 24
 pnpm install
-pnpm test
-pnpm typecheck
-pnpm build
+pnpm test          # vitest
+pnpm typecheck     # tsc --noEmit
+pnpm build         # tsup, dist/ 생성
 ```
 
-## License
+## 문제 해결
 
-MIT. [`LICENSE`](./LICENSE) 참조.
+- **인증 오류(코드 30)**: Encoding 키를 넣으면 이중 인코딩으로 실패한다. **Decoding(원본)** 키를 쓴다. 서버가 시작 시 Encoding 키로 보이면 경고 로그를 남긴다. 활용신청이 아직 `[승인]`되지 않은 경우에도 같은 오류가 나므로, [공공데이터포털](https://www.data.go.kr) 마이페이지에서 **나라장터 사용자정보서비스** 승인 상태를 확인한다.
+- **결과코드 메시지**: 트래픽 초과, 인증키 만료 등 data.go.kr 결과코드는 한국어 메시지로 정규화되어 반환된다.
+- **도구 동작 점검**: MCP inspector로 직접 호출해 볼 수 있다.
+
+  ```bash
+  npx @modelcontextprotocol/inspector npx -y @opendata-kr/narajangteo-corpinfo-mcp
+  ```
+
+## 라이선스
+
+[MIT](./LICENSE)
