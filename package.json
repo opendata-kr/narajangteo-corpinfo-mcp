@@ -1,7 +1,7 @@
 {
   "name": "@opendata-kr/narajangteo-corpinfo-mcp",
   "version": "0.0.0",
-  "description": "나라장터 사용자정보서비스 Open API를 위한 로컬 MCP 서버",
+  "description": "나라장터 사용자정보서비스(공공데이터포털 data.go.kr) Open API를 감싼 로컬 MCP 서버",
   "mcpName": "io.github.opendata-kr/narajangteo-corpinfo",
   "type": "module",
   "bin": {
