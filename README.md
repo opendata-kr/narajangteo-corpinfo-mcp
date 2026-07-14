@@ -447,11 +447,11 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 | 환경변수 | 필수 | 비밀 | 기본값 | 설명 |
 |---|---|---|---|---|
 | `DATA_GO_KR_SERVICE_KEY` | 예 | 예 | (없음) | 공공데이터포털 **Decoding(원본)** 인증키 |
-| `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr` | 게이트웨이 base URL 오버라이드 |
+| `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr/1230000/ao/UsrInfoService02` | 서비스 경로를 포함한 전체 URL 오버라이드 |
 
 ## 도구
 
-2개 도구 모두 읽기 전용 조회다(`readOnlyHint`·`openWorldHint`). 사업자번호로 조회하며 업체명→사업자번호 리졸버나 코드→업체 역검색은 이 API 표면에 없어 지원하지 않는다. 등록업종·공급물품 목록은 조회 상한에 잘릴 수 있고, 잘리면 응답의 `truncated`가 `true`가 되며 `notes`에 경고가 실린다.
+2개 도구 모두 읽기 전용 조회다(`readOnlyHint`·`openWorldHint`). 사업자번호로 조회하며 업체명→사업자번호 리졸버나 코드→업체 역검색은 이 API 표면에 없어 지원하지 않는다. 등록업종·공급물품 목록은 조회 상한에 잘릴 수 있고, 잘리면 응답의 `truncated`가 `true`가 되며 `notes`에 경고가 실린다. 응답의 `invalidCounts`는 facet별로 응답 스키마 검증에서 탈락해 목록에서 제외된 건수다. 0이 아니면 API 응답 필드가 예고 없이 바뀐 신호이므로 [이슈로 알려주면](https://github.com/opendata-kr/narajangteo-corpinfo-mcp/issues) 반영한다. 한 호출이 facet 수만큼 API 요청을 소모한다(프로파일 4건·자격 판정 3건 이상).
 
 | 도구 | 설명 |
 |---|---|
@@ -476,6 +476,7 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 | `supplyProducts` | `CompanySupplyProduct[] \| { error }` | 공급물품 목록 |
 | `sanctions` | `{ sanctioned: boolean, records: CompanySanction[] } \| { error }` | 부정당제재 유무와 목록 |
 | `truncated` | `{ industries, supplyProducts, sanctions }` (각 `boolean`) | facet별 목록 조회 상한 도달 여부 |
+| `invalidCounts` | `{ basic, industries, supplyProducts, sanctions }` (각 `number`) | facet별 스키마 검증 탈락 건수 |
 | `notes` | `string[]` | 미등록·조회상한 등 주의사항 |
 
 각 facet(`basic`·`industries`·`supplyProducts`·`sanctions`)은 조회 실패 시 `{ error }`로 격리된다(전체 실패로 뭉개지 않음).
@@ -499,6 +500,7 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 | `productChecks` | `ProductCheck[] \| { error }` | 코드별 세부품명 보유·제조 판정 |
 | `sanction` | `{ sanctioned: boolean, records: CompanySanction[] } \| { error }` | 부정당제재 유무와 목록 |
 | `truncated` | `{ industries, supplyProducts, sanctions }` (각 `boolean`) | 목록 조회 상한 도달 여부 |
+| `invalidCounts` | `{ industries, supplyProducts, sanctions }` (각 `number`) | facet별 스키마 검증 탈락 건수 |
 | `notes` | `string[]` | 역검색 불가·미보유 미확정 등 주의사항 |
 
 지정 코드가 목록에 없으면 `held: false`다. 다만 그 목록이 조회 상한에 잘렸으면(`truncated`) 미보유가 확정이 아님을 `notes`가 알린다.

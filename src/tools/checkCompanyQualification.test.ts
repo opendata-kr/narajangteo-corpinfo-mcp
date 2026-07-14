@@ -1,40 +1,15 @@
 import { describe, it, expect } from "vitest";
-import type { DataGoKrClient, OperationResult, Params } from "@opendata-kr/core";
 import { OP } from "../api/endpoints.js";
+import { routed, result, FAR_FUTURE, FAR_PAST } from "../test-helpers.js";
 import {
   checkCompanyQualificationInputShape,
   runCheckCompanyQualification,
 } from "./checkCompanyQualification.js";
 import { z } from "zod";
 
-// withKeyHint가 serviceKeyLooksPreEncoded를 읽으므로 stub에 포함한다.
-function fakeClient(
-  call: (op: string, params?: Params) => Promise<OperationResult>,
-): DataGoKrClient {
-  return { call, serviceKeyLooksPreEncoded: false };
-}
 
-function result(
-  items: Array<Record<string, string>>,
-  totalCount?: number,
-): OperationResult {
-  return { totalCount: totalCount ?? items.length, pageNo: 1, items };
-}
 
-// op 문자열별로 응답을 라우팅하는 fakeClient. 지정 안 한 op는 빈 결과.
-function routed(
-  map: Partial<Record<string, () => Promise<OperationResult>>>,
-): DataGoKrClient {
-  return fakeClient(async (op) => {
-    const fn = map[op];
-    if (!fn) return result([]);
-    return fn();
-  });
-}
 
-// 극단 만료일: 실시계(kstToday)와 무관하게 valid를 단정하기 위해 먼 미래/과거를 쓴다.
-const FAR_FUTURE = "2999-12-31 23:59:59";
-const FAR_PAST = "1999-01-01 00:00:00";
 
 describe("checkCompanyQualificationInputShape", () => {
   it("bizno가 10자리 숫자가 아니면 파싱을 거절한다", () => {
@@ -60,8 +35,7 @@ describe("checkCompanyQualificationInputShape", () => {
 describe("runCheckCompanyQualification", () => {
   it("보유·미보유 혼합 industryCodes를 코드별 held로 판정한다", async () => {
     const client = routed({
-      [OP.industry]: async () =>
-        result([
+      [OP.industry]: result([
           {
             indstrytyCd: "1234",
             indstrytyNm: "전기공사업",
@@ -95,8 +69,7 @@ describe("runCheckCompanyQualification", () => {
 
   it("빈 배열 industryCodes는 전 목록을 각 held:true로 반환한다", async () => {
     const client = routed({
-      [OP.industry]: async () =>
-        result([
+      [OP.industry]: result([
           {
             indstrytyCd: "1234",
             indstrytyStatsNm: "정상",
@@ -126,8 +99,7 @@ describe("runCheckCompanyQualification", () => {
 
   it("undefined industryCodes도 전 목록을 반환한다(미지정 동일 처리)", async () => {
     const client = routed({
-      [OP.industry]: async () =>
-        result([{ indstrytyCd: "1234", indstrytyStatsNm: "정상" }]),
+      [OP.industry]: result([{ indstrytyCd: "1234", indstrytyStatsNm: "정상" }]),
     });
     const r = await runCheckCompanyQualification(client, {
       bizno: "1234567890",
@@ -142,9 +114,7 @@ describe("runCheckCompanyQualification", () => {
 
   it("업종 facet이 실패하면 industryChecks는 {error}이고 held:false로 뭉개지 않는다", async () => {
     const client = routed({
-      [OP.industry]: async () => {
-        throw new Error("업종 조회 네트워크 오류");
-      },
+      [OP.industry]: { errorCode: "99", errorMsg: "업종 조회 네트워크 오류" },
     });
     const r = await runCheckCompanyQualification(client, {
       bizno: "1234567890",
@@ -159,8 +129,7 @@ describe("runCheckCompanyQualification", () => {
 
   it("productChecks는 코드별 held와 manufacture(제조여부)를 판정한다", async () => {
     const client = routed({
-      [OP.supply]: async () =>
-        result([
+      [OP.supply]: result([
           { dtilPrdctClsfcNo: "1111111111", mnfctYn: "Y" },
           { dtilPrdctClsfcNo: "2222222222", mnfctYn: "N" },
         ]),
@@ -182,8 +151,7 @@ describe("runCheckCompanyQualification", () => {
 
   it("빈 배열 productCodes는 전 목록을 각 held:true로 반환한다", async () => {
     const client = routed({
-      [OP.supply]: async () =>
-        result([{ dtilPrdctClsfcNo: "1111111111", mnfctYn: "Y" }]),
+      [OP.supply]: result([{ dtilPrdctClsfcNo: "1111111111", mnfctYn: "Y" }]),
     });
     const r = await runCheckCompanyQualification(client, {
       bizno: "1234567890",
@@ -211,9 +179,7 @@ describe("runCheckCompanyQualification", () => {
 
   it("부정당 조회 실패는 {error}로 구분한다", async () => {
     const client = routed({
-      [OP.sanction]: async () => {
-        throw new Error("부정당 조회 오류");
-      },
+      [OP.sanction]: { errorCode: "99", errorMsg: "부정당 조회 오류" },
     });
     const r = await runCheckCompanyQualification(client, {
       bizno: "1234567890",
@@ -225,8 +191,7 @@ describe("runCheckCompanyQualification", () => {
   });
 
   it("facet totalCount가 가져온 건수를 넘으면 truncated를 표면화한다", async () => {
-    const fullPage = async () =>
-      result(
+    const fullPage = result(
         Array.from({ length: 100 }, (_, i) => ({ indstrytyCd: String(i) })),
         600,
       );
@@ -240,8 +205,7 @@ describe("runCheckCompanyQualification", () => {
   });
 
   it("업종이 truncated이고 미보유 코드가 있으면 held:false 미확정 caveat를 notes에 담는다", async () => {
-    const fullPage = async () =>
-      result(
+    const fullPage = result(
         Array.from({ length: 100 }, (_, i) => ({ indstrytyCd: String(i) })),
         600,
       );

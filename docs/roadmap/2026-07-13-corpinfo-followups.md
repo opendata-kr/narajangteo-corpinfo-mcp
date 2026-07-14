@@ -12,9 +12,9 @@
 
 ## 교차 정합·리팩터 (동작 무변)
 
-- **`toSanctionResult` 헬퍼 추출**: 부정당 결과 조립(`"error" in x ? x : {sanctioned, records}`)이 두 도구에 verbatim 중복. 공유 헬퍼로 뽑아 `SanctionResult` 형태 변경 시 한 곳만 고치게 한다.
-- **공유 테스트 유틸 추출**: `fakeClient`·`routed`·`result` 팩토리와 `FAR_FUTURE`·`FAR_PAST` 상수가 세 테스트 파일에 중복. 공유 test util로 뽑는다.
-- **팬아웃 프리미티브 검토**: 두 도구가 `Promise.allSettled` + 손수 `settle`로 facet 팬아웃을 재구현. 형제 리포는 core `fanOut`을 쓰지만 그건 동질 업무구분 팬아웃이고 여기 facet은 이질(기본·업종·공급물품·부정당)이라 바로 들어맞지 않는다. core에 이질 facet 팬아웃 프리미티브를 승격할지, 현행 유지할지 결정한다.
+- **`toSanctionResult` 헬퍼 추출**: 완료(core 0.4 이행 PR). `format.ts`의 공유 헬퍼로 단일화.
+- **공유 테스트 유틸 추출**: 완료(core 0.4 이행 PR). `src/test-helpers.ts`로 통합(`makeTestClient`·`routed`·`result`·`FAR_FUTURE`/`FAR_PAST`). fetch 주입 실클라이언트 방식이라 가짜 클라이언트 캐스트도 소멸.
+- **팬아웃 프리미티브 검토**: 결정 완료 — core `fanOut` 미채택, 현행 유지. fanOut은 동질 컬렉션의 label 결과맵이라 이질 facet(반환 타입이 facet마다 다름)에 쓰면 `Outcome<unknown>`으로 타입이 죽는다. `fetchFacet`(FacetError 격리) + `Promise.allSettled`가 같은 부분실패 보장을 타입 보존으로 제공한다.
 - **truncated caveat 헬퍼**: 잘림 거짓음성 안내 블록이 업종·공급물품으로 near-duplicate. 세 번째 facet에 필요해지면 파라미터화한다.
 
 ## 발행 파이프라인 잔여
@@ -24,5 +24,5 @@
 
 ## MCP 표준 감사 후속 (2026-07-14 워크스페이스 감사)
 
-- **server.json icons 누락**: prespec·opening과 달리 조직 통일 `icons`(정본 URL)가 없다. 발행 전 체크리스트 항목이라 다음 릴리스 전에 추가한다.
-- **core 0.4 이행**: 공통 이행 작업 + facet 팬아웃 재구현의 fanOut 채택 재검토(위 [팬아웃 프리미티브 검토]와 병합). 체크리스트는 core 리포 `docs/roadmap/2026-07-14-typed-transport-followups.md` B4(소비 버전 `^0.4.1` 이상).
+- **server.json icons 누락**: 완료(core 0.4 이행 PR에서 조직 통일 icons 추가).
+- **core 0.4 이행**: 완료(공통 작업 + 팬아웃 검토 결정. 체크리스트는 core 리포 `docs/roadmap/2026-07-14-typed-transport-followups.md` B4).

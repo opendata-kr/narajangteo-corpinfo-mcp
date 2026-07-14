@@ -1,37 +1,15 @@
 import { describe, it, expect } from "vitest";
-import type { DataGoKrClient, OperationResult, Params } from "@opendata-kr/core";
 import { OP } from "../api/endpoints.js";
+import { routed, result, FAR_FUTURE, FAR_PAST } from "../test-helpers.js";
 import {
   getCompanyProfileInputShape,
   runGetCompanyProfile,
 } from "./getCompanyProfile.js";
 import { z } from "zod";
 
-// withKeyHint가 serviceKeyLooksPreEncoded를 읽으므로 stub에 포함한다.
-function fakeClient(
-  call: (op: string, params?: Params) => Promise<OperationResult>,
-): DataGoKrClient {
-  return { call, serviceKeyLooksPreEncoded: false };
-}
 
-function result(items: Array<Record<string, string>>, totalCount?: number): OperationResult {
-  return { totalCount: totalCount ?? items.length, pageNo: 1, items };
-}
 
-// op 문자열별로 응답을 라우팅하는 fakeClient. 지정 안 한 op는 빈 결과.
-function routed(
-  map: Partial<Record<string, () => Promise<OperationResult>>>,
-): DataGoKrClient {
-  return fakeClient(async (op) => {
-    const fn = map[op];
-    if (!fn) return result([]);
-    return fn();
-  });
-}
 
-// 극단 만료일: 실시계(kstToday)와 무관하게 valid를 단정하기 위해 먼 미래/과거를 쓴다.
-const FAR_FUTURE = "2999-12-31 23:59:59";
-const FAR_PAST = "1999-01-01 00:00:00";
 
 describe("getCompanyProfileInputShape", () => {
   it("bizno가 10자리 숫자가 아니면 파싱을 거절한다", () => {
@@ -45,12 +23,10 @@ describe("getCompanyProfileInputShape", () => {
 describe("runGetCompanyProfile", () => {
   it("한 facet만 실패하면 나머지는 반환하고 실패 facet은 {error}로 남긴다", async () => {
     const client = routed({
-      [OP.basic]: async () => result([{ bizno: "1234567890", corpNm: "테스트상사" }]),
-      [OP.industry]: async () => result([{ indstrytyCd: "1234", indstrytyNm: "전기공사업" }]),
-      [OP.supply]: async () => result([{ dtilPrdctClsfcNo: "1111111111", mnfctYn: "Y" }]),
-      [OP.sanction]: async () => {
-        throw new Error("부정당 조회 네트워크 오류");
-      },
+      [OP.basic]: result([{ bizno: "1234567890", corpNm: "테스트상사" }]),
+      [OP.industry]: result([{ indstrytyCd: "1234", indstrytyNm: "전기공사업" }]),
+      [OP.supply]: result([{ dtilPrdctClsfcNo: "1111111111", mnfctYn: "Y" }]),
+      [OP.sanction]: { errorCode: "99", errorMsg: "부정당 조회 네트워크 오류" },
     });
     const r = await runGetCompanyProfile(client, { bizno: "1234567890" });
 
@@ -75,7 +51,7 @@ describe("runGetCompanyProfile", () => {
 
   it("부정당이 빈 결과면 sanctioned:false·records:[]로 무제재를 표현한다", async () => {
     const client = routed({
-      [OP.basic]: async () => result([{ bizno: "1234567890" }]),
+      [OP.basic]: result([{ bizno: "1234567890" }]),
     });
     const r = await runGetCompanyProfile(client, { bizno: "1234567890" });
     expect("error" in r.sanctions).toBe(false);
@@ -87,9 +63,8 @@ describe("runGetCompanyProfile", () => {
 
   it("industries 항목에 valid·statusName·expiryDate·representative 원신호를 담는다", async () => {
     const client = routed({
-      [OP.basic]: async () => result([{ bizno: "1234567890" }]),
-      [OP.industry]: async () =>
-        result([
+      [OP.basic]: result([{ bizno: "1234567890" }]),
+      [OP.industry]: result([
           {
             indstrytyCd: "1234",
             indstrytyNm: "전기공사업",
@@ -120,13 +95,12 @@ describe("runGetCompanyProfile", () => {
 
   it("facet totalCount가 가져온 건수를 넘으면 truncated:true를 표면화한다", async () => {
     // 매 페이지 full(100)이고 totalCount 600 → 500 fetched < 600 → truncated.
-    const fullPage = async () =>
-      result(
+    const fullPage = result(
         Array.from({ length: 100 }, (_, i) => ({ indstrytyCd: String(i) })),
         600,
       );
     const client = routed({
-      [OP.basic]: async () => result([{ bizno: "1234567890" }]),
+      [OP.basic]: result([{ bizno: "1234567890" }]),
       [OP.industry]: fullPage,
     });
     const r = await runGetCompanyProfile(client, { bizno: "1234567890" });

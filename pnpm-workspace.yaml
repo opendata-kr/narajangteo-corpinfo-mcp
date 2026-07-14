@@ -1,4 +1,4 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@opendata-kr/core@0.3.0'
+  - '@opendata-kr/core@0.4.1'
