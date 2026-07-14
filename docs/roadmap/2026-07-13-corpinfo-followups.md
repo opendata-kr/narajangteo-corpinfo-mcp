@@ -16,3 +16,8 @@
 - **공유 테스트 유틸 추출**: `fakeClient`·`routed`·`result` 팩토리와 `FAR_FUTURE`·`FAR_PAST` 상수가 세 테스트 파일에 중복. 공유 test util로 뽑는다.
 - **팬아웃 프리미티브 검토**: 두 도구가 `Promise.allSettled` + 손수 `settle`로 facet 팬아웃을 재구현. 형제 리포는 core `fanOut`을 쓰지만 그건 동질 업무구분 팬아웃이고 여기 facet은 이질(기본·업종·공급물품·부정당)이라 바로 들어맞지 않는다. core에 이질 facet 팬아웃 프리미티브를 승격할지, 현행 유지할지 결정한다.
 - **truncated caveat 헬퍼**: 잘림 거짓음성 안내 블록이 업종·공급물품으로 near-duplicate. 세 번째 facet에 필요해지면 파라미터화한다.
+
+## MCP 표준 감사 후속 (2026-07-14 워크스페이스 감사)
+
+- **server.json icons 누락**: prespec·opening과 달리 조직 통일 `icons`(정본 URL)가 없다. 발행 전 체크리스트 항목이라 다음 릴리스 전에 추가한다.
+- **core 0.4.0 이행**: 공통 이행 작업 + facet 팬아웃 재구현의 fanOut 채택 재검토(위 [팬아웃 프리미티브 검토]와 병합). 체크리스트는 core 리포 `docs/roadmap/2026-07-14-typed-transport-followups.md` B4.
