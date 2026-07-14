@@ -26,3 +26,7 @@
 
 - **server.json icons 누락**: 완료(core 0.4 이행 PR에서 조직 통일 icons 추가).
 - **core 0.4 이행**: 완료(공통 작업 + 팬아웃 검토 결정. 체크리스트는 core 리포 `docs/roadmap/2026-07-14-typed-transport-followups.md` B4).
+
+## core 0.4 이행 후속 (2026-07-14 이식 리뷰)
+
+- **라이브 재검증 1회**: 라이브 검증(2026-07-13)이 invalid 개념 도입보다 앞서 `invalid > 0` 승격이 실 API로 밟힌 적 없다. 승인 키로 전 도구를 구동해 스키마 정합을 확인하고 결과를 `.superpowers/sdd/probe-findings.md`에 기록.
