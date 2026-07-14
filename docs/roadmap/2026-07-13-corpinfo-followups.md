@@ -25,4 +25,4 @@
 ## MCP 표준 감사 후속 (2026-07-14 워크스페이스 감사)
 
 - **server.json icons 누락**: prespec·opening과 달리 조직 통일 `icons`(정본 URL)가 없다. 발행 전 체크리스트 항목이라 다음 릴리스 전에 추가한다.
-- **core 0.4.0 이행**: 공통 이행 작업 + facet 팬아웃 재구현의 fanOut 채택 재검토(위 [팬아웃 프리미티브 검토]와 병합). 체크리스트는 core 리포 `docs/roadmap/2026-07-14-typed-transport-followups.md` B4.
+- **core 0.4 이행**: 공통 이행 작업 + facet 팬아웃 재구현의 fanOut 채택 재검토(위 [팬아웃 프리미티브 검토]와 병합). 체크리스트는 core 리포 `docs/roadmap/2026-07-14-typed-transport-followups.md` B4(소비 버전 `^0.4.1` 이상).
