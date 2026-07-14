@@ -3,10 +3,16 @@ import type { DataGoKrClient } from "@opendata-kr/core";
 import {
   formatIndustry,
   formatSupplyProduct,
-  formatSanction,
+  toSanctionResult,
   kstToday,
 } from "../format.js";
 import { fetchFacet, type FacetFetch } from "../api/fetchFacet.js";
+import {
+  RawIndustrySchema,
+  RawSupplyProductSchema,
+  RawSanctionSchema,
+} from "../api/schema.js";
+import type { RawIndustry, RawSupplyProduct } from "../api/schema.js";
 import type { FacetError, SanctionResult } from "../api/types.js";
 
 // LLM에는 camelCase 의미 이름만 노출하고 raw 코드(inqryDiv 등)는 핸들러 내부에 둔다.
@@ -59,12 +65,17 @@ export interface CheckResult {
     supplyProducts: boolean;
     sanctions: boolean;
   };
+  invalidCounts: {
+    industries: number;
+    supplyProducts: number;
+    sanctions: number;
+  };
   notes: string[];
 }
 
 // allSettled 결과를 FacetFetch로 되돌린다. fetchFacet은 자체적으로 실패를 흡수하지만,
 // 예기치 못한 reject도 {error}로 낮춰 전체 throw를 막는다.
-function settle(r: PromiseSettledResult<FacetFetch>): FacetFetch {
+function settle<Raw>(r: PromiseSettledResult<FacetFetch<Raw>>): FacetFetch<Raw> {
   if (r.status === "fulfilled") return r.value;
   return {
     error: r.reason instanceof Error ? r.reason.message : String(r.reason),
@@ -72,8 +83,13 @@ function settle(r: PromiseSettledResult<FacetFetch>): FacetFetch {
 }
 
 // 에러 facet의 truncated는 의미가 없으므로 false로 본다.
-function truncatedOf(f: FacetFetch): boolean {
+function truncatedOf(f: FacetFetch<unknown>): boolean {
   return "error" in f ? false : f.truncated;
+}
+
+// 에러 facet의 invalidCount도 의미가 없으므로 0으로 본다.
+function invalidOf(f: FacetFetch<unknown>): number {
+  return "error" in f ? 0 : f.invalidCount;
 }
 
 // 코드 지정 = 비어있지 않은 배열. undefined·빈 배열은 미지정(전 목록 반환)으로 동일 처리한다.
@@ -84,7 +100,7 @@ function isSpecified(codes: string[] | undefined): codes is string[] {
 // 업종 facet 결과를 IndustryCheck[]로. 미지정이면 전 목록(각 held:true),
 // 지정이면 코드마다 목록 존재 여부로 held를 매기고 매칭 항목의 원신호를 싣는다.
 function toIndustryChecks(
-  fetch: FacetFetch,
+  fetch: FacetFetch<RawIndustry>,
   codes: string[] | undefined,
   today: string,
 ): IndustryCheck[] | FacetError {
@@ -125,7 +141,7 @@ function toIndustryChecks(
 
 // 공급물품 facet 결과를 ProductCheck[]로. 유효 판정 없이 held·manufacture만 판정한다.
 function toProductChecks(
-  fetch: FacetFetch,
+  fetch: FacetFetch<RawSupplyProduct>,
   codes: string[] | undefined,
 ): ProductCheck[] | FacetError {
   if ("error" in fetch) return fetch;
@@ -156,21 +172,15 @@ export async function runCheckCompanyQualification(
 
   const [industrySettled, supplySettled, sanctionSettled] =
     await Promise.allSettled([
-      fetchFacet(client, "industry", bizno),
-      fetchFacet(client, "supply", bizno),
-      fetchFacet(client, "sanction", bizno),
+      fetchFacet(client, "industry", bizno, RawIndustrySchema),
+      fetchFacet(client, "supply", bizno, RawSupplyProductSchema),
+      fetchFacet(client, "sanction", bizno, RawSanctionSchema),
     ]);
   const industryRes = settle(industrySettled);
   const supplyRes = settle(supplySettled);
   const sanctionRes = settle(sanctionSettled);
 
-  const sanction: SanctionResult =
-    "error" in sanctionRes
-      ? sanctionRes
-      : {
-          sanctioned: sanctionRes.items.length > 0,
-          records: sanctionRes.items.map(formatSanction),
-        };
+  const sanction: SanctionResult = toSanctionResult(sanctionRes);
 
   const industryChecks = toIndustryChecks(industryRes, industryCodes, today);
   const productChecks = toProductChecks(supplyRes, productCodes);
@@ -178,6 +188,11 @@ export async function runCheckCompanyQualification(
     industries: truncatedOf(industryRes),
     supplyProducts: truncatedOf(supplyRes),
     sanctions: truncatedOf(sanctionRes),
+  };
+  const invalidCounts = {
+    industries: invalidOf(industryRes),
+    supplyProducts: invalidOf(supplyRes),
+    sanctions: invalidOf(sanctionRes),
   };
 
   // 이 도구는 사업자번호→자격 판정만 한다. 역방향(코드→업체 목록)과
@@ -195,5 +210,5 @@ export async function runCheckCompanyQualification(
     notes.push("공급물품 목록이 조회 상한에 잘렸다. 미보유(held:false)로 나온 세부품명번호는 확정이 아닐 수 있다.");
   }
 
-  return { bizno, industryChecks, productChecks, sanction, truncated, notes };
+  return { bizno, industryChecks, productChecks, sanction, truncated, invalidCounts, notes };
 }

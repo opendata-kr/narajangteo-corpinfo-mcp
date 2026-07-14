@@ -4,10 +4,16 @@ import {
   formatCompanyBasic,
   formatIndustry,
   formatSupplyProduct,
-  formatSanction,
+  toSanctionResult,
   kstToday,
 } from "../format.js";
 import { fetchFacet, type FacetFetch } from "../api/fetchFacet.js";
+import {
+  RawCompanyBasicSchema,
+  RawIndustrySchema,
+  RawSupplyProductSchema,
+  RawSanctionSchema,
+} from "../api/schema.js";
 import type {
   CompanyBasic,
   CompanyIndustry,
@@ -41,12 +47,18 @@ export interface CompanyProfile {
     supplyProducts: boolean;
     sanctions: boolean;
   };
+  invalidCounts: {
+    basic: number;
+    industries: number;
+    supplyProducts: number;
+    sanctions: number;
+  };
   notes: string[];
 }
 
 // allSettled 결과를 FacetFetch로 되돌린다. fetchFacet은 자체적으로 실패를 흡수하지만,
 // 예기치 못한 reject도 {error}로 낮춰 전체 throw를 막는다.
-function settle(r: PromiseSettledResult<FacetFetch>): FacetFetch {
+function settle<Raw>(r: PromiseSettledResult<FacetFetch<Raw>>): FacetFetch<Raw> {
   if (r.status === "fulfilled") return r.value;
   return {
     error: r.reason instanceof Error ? r.reason.message : String(r.reason),
@@ -54,8 +66,13 @@ function settle(r: PromiseSettledResult<FacetFetch>): FacetFetch {
 }
 
 // 에러 facet의 truncated는 의미가 없으므로 false로 본다.
-function truncatedOf(f: FacetFetch): boolean {
+function truncatedOf(f: FacetFetch<unknown>): boolean {
   return "error" in f ? false : f.truncated;
+}
+
+// 에러 facet의 invalidCount도 의미가 없으므로 0으로 본다.
+function invalidOf(f: FacetFetch<unknown>): number {
+  return "error" in f ? 0 : f.invalidCount;
 }
 
 export async function runGetCompanyProfile(
@@ -67,10 +84,10 @@ export async function runGetCompanyProfile(
 
   const [basicSettled, industrySettled, supplySettled, sanctionSettled] =
     await Promise.allSettled([
-      fetchFacet(client, "basic", bizno),
-      fetchFacet(client, "industry", bizno),
-      fetchFacet(client, "supply", bizno),
-      fetchFacet(client, "sanction", bizno),
+      fetchFacet(client, "basic", bizno, RawCompanyBasicSchema),
+      fetchFacet(client, "industry", bizno, RawIndustrySchema),
+      fetchFacet(client, "supply", bizno, RawSupplyProductSchema),
+      fetchFacet(client, "sanction", bizno, RawSanctionSchema),
     ]);
   const basicRes = settle(basicSettled);
   const industryRes = settle(industrySettled);
@@ -102,18 +119,18 @@ export async function runGetCompanyProfile(
       ? supplyRes
       : supplyRes.items.map(formatSupplyProduct);
 
-  const sanctions: SanctionResult =
-    "error" in sanctionRes
-      ? sanctionRes
-      : {
-          sanctioned: sanctionRes.items.length > 0,
-          records: sanctionRes.items.map(formatSanction),
-        };
+  const sanctions = toSanctionResult(sanctionRes);
 
   const truncated = {
     industries: truncatedOf(industryRes),
     supplyProducts: truncatedOf(supplyRes),
     sanctions: truncatedOf(sanctionRes),
+  };
+  const invalidCounts = {
+    basic: invalidOf(basicRes),
+    industries: invalidOf(industryRes),
+    supplyProducts: invalidOf(supplyRes),
+    sanctions: invalidOf(sanctionRes),
   };
   // 목록이 조회 상한(창당 500건)에 잘리면, 목록에 없는 코드가 잘린 뒤쪽에 있을 수 있다.
   // 소비 측이 목록 부재를 "미보유"로 오판하지 않게 명시한다(조용한 거짓 음성 금지).
@@ -124,5 +141,5 @@ export async function runGetCompanyProfile(
     notes.push("공급물품 목록이 조회 상한에 잘렸다. 목록에 없는 세부품명번호가 잘린 뒤쪽에 있을 수 있다.");
   }
 
-  return { bizno, basic, industries, supplyProducts, sanctions, truncated, notes };
+  return { bizno, basic, industries, supplyProducts, sanctions, truncated, invalidCounts, notes };
 }
