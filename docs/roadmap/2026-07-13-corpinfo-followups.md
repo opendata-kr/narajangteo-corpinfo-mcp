@@ -17,6 +17,11 @@
 - **팬아웃 프리미티브 검토**: 두 도구가 `Promise.allSettled` + 손수 `settle`로 facet 팬아웃을 재구현. 형제 리포는 core `fanOut`을 쓰지만 그건 동질 업무구분 팬아웃이고 여기 facet은 이질(기본·업종·공급물품·부정당)이라 바로 들어맞지 않는다. core에 이질 facet 팬아웃 프리미티브를 승격할지, 현행 유지할지 결정한다.
 - **truncated caveat 헬퍼**: 잘림 거짓음성 안내 블록이 업종·공급물품으로 near-duplicate. 세 번째 facet에 필요해지면 파라미터화한다.
 
+## 발행 파이프라인 잔여
+
+- **MCP 레지스트리 등재**: 다음 OIDC 릴리스에서 자동. 부트스트랩 태그 run은 npm 중복 발행에서 멈춰 레지스트리 단계에 못 갔다.
+- **dependabot dev-deps PR CI 실패 검토**.
+
 ## MCP 표준 감사 후속 (2026-07-14 워크스페이스 감사)
 
 - **server.json icons 누락**: prespec·opening과 달리 조직 통일 `icons`(정본 URL)가 없다. 발행 전 체크리스트 항목이라 다음 릴리스 전에 추가한다.
