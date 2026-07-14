@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/opendata-kr/narajangteo-corpinfo-mcp/compare/v0.2.0...v0.2.1) (2026-07-14)
+
+
+### Documentation
+
+* **roadmap:** MCP 레지스트리 등재 완료 반영 (v0.2.0 릴리스) ([87492f4](https://github.com/opendata-kr/narajangteo-corpinfo-mcp/commit/87492f44e5313d237be3f693a7b1c24a41177b21))
+* **roadmap:** 이행 라이브 재검증 백로그 등록 ([cd13a71](https://github.com/opendata-kr/narajangteo-corpinfo-mcp/commit/cd13a71ba76e10d3b43b0e3135fa6859c46f32d3))
+
 ## [0.2.0](https://github.com/opendata-kr/narajangteo-corpinfo-mcp/compare/v0.1.0...v0.2.0) (2026-07-14)
 
 

@@ -2,5 +2,5 @@
 // release-please-config.json의 extra-files에 { type: "generic", path: "src/version.ts" }로 등록돼 있다.
 // 초기값 0.0.0은 첫 릴리스에서 실제 버전으로 대체된다.
 // x-release-please-start-version
-export const VERSION = "0.2.0";
+export const VERSION = "0.2.1";
 // x-release-please-end
